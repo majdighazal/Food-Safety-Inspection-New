@@ -949,6 +949,45 @@ button[aria-label="Delete"]:hover{
   bottom:12px!important;
 }
 
+
+/* ===== FINAL ALL-DEVICE PDF PACKING PATCH =====
+   The inspection PDF render area is fixed to A4 pixels so phone/tablet/desktop
+   generate the same page layout. The checklist area is compacted by JS after
+   real DOM measurement; these CSS rules only support stable measurement. */
+.pdf-render-zone,
+.pdf-render-zone *{
+  -webkit-text-size-adjust:100%!important;
+  text-size-adjust:100%!important;
+}
+.pdf-render-zone .pdf-page{
+  width:794px!important;
+  max-width:794px!important;
+  height:1123px!important;
+  min-height:1123px!important;
+  padding-left:22px!important;
+  padding-right:22px!important;
+  padding-bottom:34px!important;
+}
+.pdf-render-zone .pdf-topline{
+  padding-top:18px!important;
+  margin-bottom:9px!important;
+}
+.pdf-render-zone .pdf-section-block{
+  margin-bottom:8px!important;
+}
+.pdf-render-zone .pdf-section-head{
+  padding:7px 11px!important;
+}
+.pdf-render-zone .pdf-item{
+  padding:6px 9px!important;
+}
+.pdf-render-zone .pdf-comment{
+  padding:6px 8px!important;
+}
+.pdf-render-zone .pdf-footer{
+  bottom:10px!important;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -2595,6 +2634,88 @@ function repaginateInspectionPdfPages(zone){
   updatePdfPageFooters(zone);
 }
 
+function checklistPageBlocks(page){
+  return Array.from(page.querySelectorAll(':scope > .pdf-section-block'));
+}
+function firstChecklistBlock(page){
+  const blocks=checklistPageBlocks(page);
+  return blocks.length ? blocks[0] : null;
+}
+function firstChecklistItem(block){
+  return block ? block.querySelector(':scope > .pdf-item') : null;
+}
+function normalizePdfSectionName(v){
+  return String(v||'').replace(/\s*\(Continued\)\s*$/i,'').trim();
+}
+function blocksAreSameSection(a,b){
+  return normalizePdfSectionName(sectionNameFromBlock(a)) === normalizePdfSectionName(sectionNameFromBlock(b));
+}
+function cleanupEmptyChecklistPages(zone){
+  Array.from(zone.querySelectorAll('.pdf-page')).forEach(page=>{
+    if(!isInspectionChecklistPage(page)) return;
+    if(!page.querySelector(':scope > .pdf-section-block')) page.remove();
+  });
+}
+function compactInspectionPdfPages(zone){
+  // Runtime packing pass: after images are loaded, pull items/sections upward
+  // until the current A4 page is genuinely full. This fixes phone-generated
+  // reports where conservative estimates created pages with large blank areas.
+  let changed=true;
+  let guard=0;
+  while(changed && guard<1000){
+    changed=false;
+    cleanupEmptyChecklistPages(zone);
+    const pages=Array.from(zone.querySelectorAll('.pdf-page')).filter(isInspectionChecklistPage);
+    for(let pi=0; pi<pages.length-1 && guard<1000; pi++){
+      const page=pages[pi];
+      let next=pages[pi+1];
+      let local=0;
+      while(next && isInspectionChecklistPage(next) && local<120 && guard<1000){
+        local++;
+        guard++;
+        let nextBlock=firstChecklistBlock(next);
+        if(!nextBlock){ next.remove(); changed=true; next=pages[pi+1]; continue; }
+        const currentBlocks=checklistPageBlocks(page);
+        const lastBlock=currentBlocks.length ? currentBlocks[currentBlocks.length-1] : null;
+        const footer=page.querySelector('.pdf-footer');
+        if(lastBlock && blocksAreSameSection(lastBlock,nextBlock)){
+          const item=firstChecklistItem(nextBlock);
+          if(!item){ nextBlock.remove(); changed=true; continue; }
+          lastBlock.appendChild(item);
+          if(pdfPageOverflows(page)){
+            nextBlock.insertBefore(item, firstChecklistItem(nextBlock));
+            break;
+          }
+          if(!firstChecklistItem(nextBlock)) nextBlock.remove();
+          changed=true;
+          continue;
+        }
+        // Different section: try moving the whole next section block upward.
+        page.insertBefore(nextBlock,footer);
+        if(pdfPageOverflows(page)){
+          const nextFooter=next.querySelector('.pdf-footer');
+          next.insertBefore(nextBlock,nextFooter);
+          break;
+        }
+        changed=true;
+        if(!firstChecklistBlock(next)) next.remove();
+      }
+    }
+  }
+  cleanupEmptyChecklistPages(zone);
+  updatePdfPageFooters(zone);
+}
+function optimizeInspectionPdfPages(zone){
+  // First move overflowing content down, then repeatedly pull available content
+  // back up based on actual rendered height. This is device-independent because
+  // it measures the hidden fixed-width A4 render zone, not the phone viewport.
+  repaginateInspectionPdfPages(zone);
+  compactInspectionPdfPages(zone);
+  repaginateInspectionPdfPages(zone);
+  compactInspectionPdfPages(zone);
+  updatePdfPageFooters(zone);
+}
+
 async function exportRenderedHtmlToPdf(html,filename){
   if(!window.html2canvas || !window.jspdf){
     showAppModal('PDF Library Not Loaded','The PDF library could not be loaded. Please connect to the internet and reload this HTML file, then try again.',{tone:'warning',icon:'⚠️'});
@@ -2604,7 +2725,7 @@ async function exportRenderedHtmlToPdf(html,filename){
   zone.innerHTML=html;
   await new Promise(r=>setTimeout(r,180));
   await waitForPdfImages(zone,4500);
-  repaginateInspectionPdfPages(zone);
+  optimizeInspectionPdfPages(zone);
   await new Promise(r=>setTimeout(r,120));
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF('p','mm','a4');
@@ -3031,7 +3152,7 @@ function estimatePdfItemHeight(it){
   if(comment) h += 26 + Math.min(105, Math.ceil(comment.length/82)*13);
   const photos=Array.isArray(it.photos_base64)?it.photos_base64:[];
   if(photos.length){
-    h += 8 + (132 * Math.ceil(photos.length/4));
+    h += 6 + (128 * Math.ceil(photos.length/4));
   }
   return h;
 }
@@ -3047,7 +3168,9 @@ function buildSectionBlock(section,items,continued){
 }
 function buildInspectionSectionPages(){
   const pages=[];
-  const max=855;
+  // Conservative first-pass limit; actual page packing is finalized by
+  // optimizeInspectionPdfPages() after real image sizes are available.
+  const max=1010;
   let pageGroups=[];
   let used=64;
   groupChecklist().forEach(([section,items])=>{
