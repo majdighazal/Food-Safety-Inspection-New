@@ -775,6 +775,96 @@ button[aria-label="Delete"]:hover{
 .pdf-score-card[style], .ap-score-card[style]{ border-color:inherit; }
 .pdf-score-circle[style], .ap-score-circle[style]{ box-shadow:none !important; }
 
+
+
+/* ===== FINAL FIX v18: INSPECTION PDF PHOTO ALIGNMENT + NO CUT CHECKLIST ITEMS =====
+   Mobile camera photos were breaking the PDF because html2canvas rendered CSS grid rows
+   with inconsistent vertical alignment and the manual page estimator allowed too many
+   checklist rows on one A4 page. This patch uses fixed photo rows/cards and runtime
+   pagination validation before PDF capture. */
+.pdf-photo-grid{
+  display:block!important;
+  width:100%!important;
+  margin-top:8px!important;
+  clear:both!important;
+}
+.pdf-photo-row{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:7px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+.pdf-photo-row + .pdf-photo-row{
+  margin-top:7px!important;
+}
+.pdf-photo-card{
+  flex:0 0 calc((100% - 21px) / 4)!important;
+  width:calc((100% - 21px) / 4)!important;
+  max-width:calc((100% - 21px) / 4)!important;
+  height:136px!important;
+  min-height:136px!important;
+  max-height:136px!important;
+  box-sizing:border-box!important;
+  border:1px solid #d9e3ee!important;
+  border-radius:9px!important;
+  overflow:hidden!important;
+  background:#ffffff!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-self:flex-start!important;
+  vertical-align:top!important;
+  margin:0!important;
+}
+.pdf-photo-card div{
+  height:24px!important;
+  min-height:24px!important;
+  max-height:24px!important;
+  line-height:15px!important;
+  padding:4px!important;
+  box-sizing:border-box!important;
+  flex:0 0 24px!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  color:#0f4c81!important;
+  background:#f8fbff!important;
+  border-bottom:1px solid #d9e3ee!important;
+  text-align:center!important;
+}
+.pdf-photo-card img{
+  width:100%!important;
+  height:112px!important;
+  min-height:112px!important;
+  max-height:112px!important;
+  flex:0 0 112px!important;
+  display:block!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  padding:4px!important;
+  box-sizing:border-box!important;
+  transform-origin:center center!important;
+}
+.pdf-item{
+  break-inside:avoid!important;
+  page-break-inside:avoid!important;
+  overflow:visible!important;
+}
+.pdf-section-block{
+  page-break-inside:avoid!important;
+}
+.pdf-item-title{
+  font-size:11.2px!important;
+  line-height:1.28!important;
+}
+.pdf-status{
+  min-width:112px!important;
+  text-align:center!important;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -2293,6 +2383,124 @@ function closeExportProgress(){
 
 function statusTextForTable(status){ return ratingLabel(status); }
 
+
+async function waitForPdfImages(root,timeoutMs=3500){
+  const imgs=Array.from(root.querySelectorAll('img'));
+  if(!imgs.length) return;
+  await Promise.race([
+    Promise.all(imgs.map(img=>{
+      if(img.complete && img.naturalWidth!==0) return Promise.resolve();
+      return new Promise(resolve=>{
+        img.onload=resolve;
+        img.onerror=resolve;
+      });
+    })),
+    new Promise(resolve=>setTimeout(resolve,timeoutMs))
+  ]);
+}
+function isInspectionChecklistPage(page){
+  const h=page && page.querySelector('.pdf-topline h2');
+  return h && /inspection check lists/i.test(h.textContent || '');
+}
+function pdfContentBottom(page){
+  const pageTop=page.getBoundingClientRect().top;
+  const footer=page.querySelector('.pdf-footer');
+  const limit=(footer ? footer.getBoundingClientRect().top : pageTop+1070) - 10;
+  let bottom=pageTop;
+  Array.from(page.children).forEach(ch=>{
+    if(ch.classList && ch.classList.contains('pdf-footer')) return;
+    const r=ch.getBoundingClientRect();
+    bottom=Math.max(bottom,r.bottom);
+  });
+  return {bottom,limit};
+}
+function pdfPageOverflows(page){
+  const x=pdfContentBottom(page);
+  return x.bottom > x.limit;
+}
+function makeChecklistContinuationPage(afterPage){
+  const page=document.createElement('section');
+  page.className='pdf-page';
+  page.innerHTML='<div class="pdf-topline"><h2>Inspection Check Lists</h2><div class="right">Private &amp; Confidential<br>Continued</div></div><div class="pdf-footer"><span>Private &amp; Confidential</span><span></span></div>';
+  afterPage.insertAdjacentElement('afterend',page);
+  return page;
+}
+function sectionNameFromBlock(block){
+  const span=block && block.querySelector('.pdf-section-head span:first-child');
+  return span ? String(span.textContent || '').replace(/\s*\(Continued\)\s*$/i,'').trim() : '';
+}
+function ensureContinuationBlock(page,sourceBlock){
+  const footer=page.querySelector('.pdf-footer');
+  const sourceName=sectionNameFromBlock(sourceBlock);
+  let first=page.querySelector('.pdf-section-block');
+  if(first && sectionNameFromBlock(first)===sourceName) return first;
+  const block=document.createElement('div');
+  block.className='pdf-section-block';
+  const head=(sourceBlock.querySelector('.pdf-section-head') || document.createElement('div')).cloneNode(true);
+  head.className='pdf-section-head';
+  const firstSpan=head.querySelector('span:first-child');
+  if(firstSpan && !/continued/i.test(firstSpan.textContent||'')) firstSpan.textContent=(firstSpan.textContent||'')+' (Continued)';
+  block.appendChild(head);
+  page.insertBefore(block, first || footer);
+  return block;
+}
+function splitSingleHugeItemToNextPage(page,item,sourceBlock){
+  const rows=Array.from(item.querySelectorAll('.pdf-photo-row'));
+  if(rows.length<=1) return false;
+  const next=makeChecklistContinuationPage(page);
+  const block=ensureContinuationBlock(next,sourceBlock);
+  const itemTop=item.querySelector('.pdf-item-top');
+  const newItem=document.createElement('div');
+  newItem.className='pdf-item';
+  newItem.innerHTML=(itemTop?itemTop.outerHTML:'') + '<div class="pdf-comment"><b>Evidence Photos Continued</b></div><div class="pdf-photo-grid"></div>';
+  const newGrid=newItem.querySelector('.pdf-photo-grid');
+  const row=rows[rows.length-1];
+  newGrid.insertBefore(row,newGrid.firstChild);
+  block.insertBefore(newItem,block.children[1] || null);
+  return true;
+}
+function moveLastChecklistUnitToNextPage(page){
+  const blocks=Array.from(page.querySelectorAll(':scope > .pdf-section-block'));
+  if(!blocks.length) return false;
+  const sourceBlock=blocks[blocks.length-1];
+  const items=Array.from(sourceBlock.querySelectorAll(':scope > .pdf-item'));
+  if(!items.length){ sourceBlock.remove(); return true; }
+  const onlyBlock=blocks.length===1;
+  const onlyItem=items.length===1;
+  if(onlyBlock && onlyItem && splitSingleHugeItemToNextPage(page,items[0],sourceBlock)) return true;
+  const next=makeChecklistContinuationPage(page);
+  if(items.length>1){
+    const item=items[items.length-1];
+    const target=ensureContinuationBlock(next,sourceBlock);
+    target.insertBefore(item,target.children[1] || null);
+    return true;
+  }
+  next.insertBefore(sourceBlock,next.querySelector('.pdf-footer'));
+  return true;
+}
+function updatePdfPageFooters(zone){
+  const pages=Array.from(zone.querySelectorAll('.pdf-page'));
+  const total=pages.length;
+  pages.forEach((page,i)=>{
+    const footer=page.querySelector('.pdf-footer span:last-child');
+    if(footer) footer.textContent='Page '+(i+1)+' of '+total;
+  });
+}
+function repaginateInspectionPdfPages(zone){
+  let guard=0;
+  for(let idx=0; idx<zone.querySelectorAll('.pdf-page').length; idx++){
+    const page=zone.querySelectorAll('.pdf-page')[idx];
+    if(!isInspectionChecklistPage(page)) continue;
+    let local=0;
+    while(pdfPageOverflows(page) && local<25 && guard<250){
+      const moved=moveLastChecklistUnitToNextPage(page);
+      local++; guard++;
+      if(!moved) break;
+    }
+  }
+  updatePdfPageFooters(zone);
+}
+
 async function exportRenderedHtmlToPdf(html,filename){
   if(!window.html2canvas || !window.jspdf){
     showAppModal('PDF Library Not Loaded','The PDF library could not be loaded. Please connect to the internet and reload this HTML file, then try again.',{tone:'warning',icon:'⚠️'});
@@ -2300,7 +2508,10 @@ async function exportRenderedHtmlToPdf(html,filename){
   }
   const zone=$('pdfRenderZone');
   zone.innerHTML=html;
-  await new Promise(r=>setTimeout(r,250));
+  await new Promise(r=>setTimeout(r,180));
+  await waitForPdfImages(zone,4500);
+  repaginateInspectionPdfPages(zone);
+  await new Promise(r=>setTimeout(r,120));
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF('p','mm','a4');
   const pages=Array.from(zone.querySelectorAll('.pdf-page'));
@@ -2655,10 +2866,16 @@ function buildPdfPhotoGrid(photos){
   photos=Array.isArray(photos)?photos:[];
   const valid=photos.map((p,i)=>({p,src:getPhotoSrc(p),idx:i})).filter(x=>x.src);
   if(!valid.length) return '';
-  return '<div class="pdf-photo-grid">' + valid.map((x,n)=>{
-    const rot=getPhotoRotation(x.p);
-    return '<div class="pdf-photo-card"><div>Photo #'+(n+1)+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(photoTransform(rot))+'" /></div>';
-  }).join('') + '</div>';
+  const rows=[];
+  for(let r=0;r<valid.length;r+=4){
+    const row=valid.slice(r,r+4).map((x,n)=>{
+      const photoNo=r+n+1;
+      const rot=getPhotoRotation(x.p);
+      return '<div class="pdf-photo-card"><div>Photo #'+photoNo+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(photoTransform(rot))+'" /></div>';
+    }).join('');
+    rows.push('<div class="pdf-photo-row">'+row+'</div>');
+  }
+  return '<div class="pdf-photo-grid">' + rows.join('') + '</div>';
 }
 function buildPdfGeneralPhotoGrid(photos){
   photos=Array.isArray(photos)?photos:[];
@@ -2683,10 +2900,17 @@ function buildInspectionCover(totalPages){
     '<div class="pdf-band">Issues Requiring Attention</div><table class="pdf-table"><thead><tr><th style="width:40px;text-align:center">#</th><th style="width:130px">Section</th><th>Finding</th><th style="width:125px">Status</th></tr></thead><tbody>'+issues+'</tbody></table>'+buildFooter(1,totalPages)+'</section>';
 }
 function estimatePdfItemHeight(it){
-  let h=52;
-  const title=String(it.item_title||''); if(title.length>90) h+=18;
-  const comment=normalizeComment(it.comment||''); if(comment) h+=30+Math.min(78, Math.ceil(comment.length/78)*13);
-  const photos=Array.isArray(it.photos_base64)?it.photos_base64:[]; if(photos.length) h+=122*Math.ceil(Math.min(photos.length,8)/4);
+  // Conservative A4 estimator. Runtime pagination validates this again after the
+  // DOM and all mobile camera photos are loaded, so checklist items are not cut.
+  let h=62;
+  const title=String(it.item_title||'');
+  h += Math.max(0, Math.ceil(title.length/72)-1) * 16;
+  const comment=normalizeComment(it.comment||'');
+  if(comment) h += 42 + Math.min(130, Math.ceil(comment.length/68)*15);
+  const photos=Array.isArray(it.photos_base64)?it.photos_base64:[];
+  if(photos.length){
+    h += 14 + (146 * Math.ceil(photos.length/4));
+  }
   return h;
 }
 function buildSectionBlock(section,items,continued){
@@ -2701,7 +2925,7 @@ function buildSectionBlock(section,items,continued){
 }
 function buildInspectionSectionPages(){
   const pages=[];
-  const max=932;
+  const max=650;
   let pageGroups=[];
   let used=86;
   groupChecklist().forEach(([section,items])=>{
