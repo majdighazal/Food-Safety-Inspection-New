@@ -988,6 +988,240 @@ button[aria-label="Delete"]:hover{
   bottom:10px!important;
 }
 
+
+
+/* ===== FINAL PATCH v22: LOCKED REPORT INFO LISTS + VISIBLE PHOTO SIZE FIX ===== */
+.eval-field select{
+  width:100%;border:1px solid var(--field-border);border-radius:9px;
+  padding:8px 10px;font-size:13px;color:var(--field-text);
+  background:var(--field-bg);outline:none;font-family:inherit;min-height:38px;
+}
+.eval-field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,164,.12)}
+.eval-field select.field-error{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.15)!important;background:#fff1f2!important}
+.eval-multi-box{
+  width:100%;border:1px solid var(--field-border);border-radius:9px;
+  background:var(--field-bg);color:var(--field-text);min-height:38px;
+}
+.eval-multi-box summary{
+  list-style:none;cursor:pointer;padding:9px 10px;font-size:13px;font-weight:800;
+  color:var(--field-text);display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.eval-multi-box summary::-webkit-details-marker{display:none}
+.eval-multi-box summary:after{content:"▾";font-weight:900;color:var(--brand)}
+.eval-multi-box[open] summary:after{content:"▴"}
+.eval-multi-list{border-top:1px solid var(--line);padding:8px;max-height:210px;overflow:auto;display:grid;gap:6px;background:var(--card);border-radius:0 0 9px 9px}
+.eval-multi-option{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--text);padding:6px 7px;border:1px solid var(--line);border-radius:8px;background:var(--info-card-bg);cursor:pointer}
+.eval-multi-option input{width:16px;height:16px;accent-color:var(--brand);flex:none}
+.eval-multi-placeholder{color:var(--muted);font-weight:800}
+.eval-multi-box.field-error{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.15)!important;background:#fff1f2!important}
+[data-theme="dark"] .eval-multi-box.field-error{background:#4a1f28!important;color:#fff!important}
+
+
+
+/* ===== FINAL CLEAN PHOTO STANDARD: INSPECTION REPORT + EVALUATOR =====
+   Single source of truth after removing conflicting photo-size patches.
+   Inspection PDF photos are smaller in width again (4 per row), taller than
+   the original, centered, and shown as full normal images: no crop, no stretch,
+   no zoom-in. Rotation is still respected from the image inline transform. */
+.photo-grid{
+  grid-template-columns:repeat(auto-fit,minmax(232px,232px))!important;
+  justify-content:center!important;
+  gap:16px!important;
+}
+.photo-card{
+  width:232px!important;
+  max-width:232px!important;
+}
+.photo-wrap{
+  width:232px!important;
+  max-width:232px!important;
+  height:178px!important;
+  overflow:hidden!important;
+  background:#ffffff!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.photo-img,
+.locked-photo-wrap img,
+.pdf-photo-card img,
+.pdf-general-photo-card img{
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  filter:none!important;
+}
+.photo-wrap:hover .photo-img{
+  transform:none!important;
+}
+.locked-photo-grid{
+  grid-template-columns:repeat(auto-fill,minmax(225px,1fr))!important;
+  gap:12px!important;
+}
+.locked-photo-wrap{
+  height:178px!important;
+  background:#ffffff!important;
+}
+@media(max-width:768px){
+  .photo-grid{grid-template-columns:repeat(2,minmax(210px,232px))!important;}
+  .photo-card{width:100%!important;max-width:232px!important;}
+  .photo-wrap{width:100%!important;height:190px!important;max-width:232px!important;}
+}
+@media(max-width:540px){
+  .photo-grid{grid-template-columns:1fr!important;}
+  .photo-card{width:100%!important;max-width:100%!important;}
+  .photo-wrap{width:100%!important;max-width:100%!important;height:215px!important;}
+}
+.pdf-render-zone .pdf-photo-grid,
+.pdf-photo-grid{
+  display:block!important;
+  width:100%!important;
+  margin-top:7px!important;
+  clear:both!important;
+}
+.pdf-render-zone .pdf-photo-row,
+.pdf-photo-row{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  gap:7px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+.pdf-render-zone .pdf-photo-row + .pdf-photo-row,
+.pdf-photo-row + .pdf-photo-row{
+  margin-top:7px!important;
+}
+.pdf-render-zone .pdf-photo-card,
+.pdf-photo-card{
+  flex:0 0 calc((100% - 21px) / 4)!important;
+  width:calc((100% - 21px) / 4)!important;
+  max-width:calc((100% - 21px) / 4)!important;
+  height:174px!important;
+  min-height:174px!important;
+  max-height:174px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-self:flex-start!important;
+  overflow:hidden!important;
+  background:#ffffff!important;
+  box-sizing:border-box!important;
+  border:1px solid #d9e3ee!important;
+  border-radius:9px!important;
+}
+.pdf-render-zone .pdf-photo-card div,
+.pdf-photo-card div{
+  width:100%!important;
+  height:22px!important;
+  min-height:22px!important;
+  max-height:22px!important;
+  flex:0 0 22px!important;
+  line-height:14px!important;
+  padding:4px!important;
+  box-sizing:border-box!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  color:#0f4c81!important;
+  background:#f8fbff!important;
+  border-bottom:1px solid #d9e3ee!important;
+  text-align:center!important;
+}
+.pdf-render-zone .pdf-photo-card img,
+.pdf-photo-card img{
+  width:100%!important;
+  height:152px!important;
+  min-height:152px!important;
+  max-height:152px!important;
+  flex:0 0 152px!important;
+  display:block!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  padding:12px!important;
+  box-sizing:border-box!important;
+  transform-origin:center center!important;
+  filter:none!important;
+}
+
+
+/* ===== FINAL EXACT 4 PHOTO ROW FIX - INSPECTION REPORT ===== */
+/* JavaScript now emits exactly 4 photo cards per full row. These rules make the
+   PDF inspection report consistent on desktop, tablet, and phone exports. */
+.pdf-render-zone .pdf-photo-grid,
+.pdf-photo-grid{
+  display:block!important;
+  width:100%!important;
+  margin-top:7px!important;
+  clear:both!important;
+}
+.pdf-render-zone .pdf-photo-row,
+.pdf-photo-row{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:7px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+.pdf-render-zone .pdf-photo-row + .pdf-photo-row,
+.pdf-photo-row + .pdf-photo-row{
+  margin-top:7px!important;
+}
+.pdf-render-zone .pdf-photo-card,
+.pdf-photo-card{
+  flex:0 0 calc((100% - 21px) / 4)!important;
+  width:calc((100% - 21px) / 4)!important;
+  max-width:calc((100% - 21px) / 4)!important;
+  height:174px!important;
+  min-height:174px!important;
+  max-height:174px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-self:flex-start!important;
+  overflow:hidden!important;
+  background:#ffffff!important;
+  box-sizing:border-box!important;
+  border:1px solid #d9e3ee!important;
+  border-radius:9px!important;
+}
+.pdf-render-zone .pdf-photo-card div,
+.pdf-photo-card div{
+  width:100%!important;
+  height:22px!important;
+  min-height:22px!important;
+  max-height:22px!important;
+  flex:0 0 22px!important;
+  line-height:14px!important;
+  padding:4px!important;
+  box-sizing:border-box!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  color:#0f4c81!important;
+  background:#f8fbff!important;
+  border-bottom:1px solid #d9e3ee!important;
+  text-align:center!important;
+}
+.pdf-render-zone .pdf-photo-card img,
+.pdf-photo-card img{
+  width:100%!important;
+  height:152px!important;
+  min-height:152px!important;
+  max-height:152px!important;
+  flex:0 0 152px!important;
+  display:block!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  padding:12px!important;
+  box-sizing:border-box!important;
+  transform-origin:center center!important;
+  filter:none!important;
+}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -1209,6 +1443,154 @@ function closeAppModal(){
   const overlay=$("appModalOverlay");
   if(overlay) overlay.classList.remove("open");
 }
+
+
+function getJsonAccessMeta(data){
+  if(!data || typeof data !== "object") return null;
+  const meta = data.json_access || data.access_control || (data.security && data.security.json_access);
+  if(meta && (meta.protected || meta.ciphertext_base64 || meta.expiry_date_encrypted)) return meta;
+  return null;
+}
+
+function base64ToUint8Array(value){
+  const clean = String(value || "").replace(/\s+/g,"");
+  const binary = atob(clean);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
+
+function localIsoDateToday(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatIsoDateForUser(iso){
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return iso || "";
+  const dt = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
+  return `${String(dt.getDate()).padStart(2,"0")}/${mon}/${dt.getFullYear()}`;
+}
+
+function promptJsonPinCode(fileName, attemptNo=1){
+  return new Promise(resolve=>{
+    const overlay = document.createElement("div");
+    overlay.className = "app-modal-overlay open";
+    overlay.style.zIndex = "3900";
+    overlay.innerHTML = `
+      <div class="app-modal" role="dialog" aria-modal="true">
+        <div class="app-modal-head"><span>🔐</span><span>Protected JSON File</span></div>
+        <div class="app-modal-body">
+          <p style="margin-bottom:10px;font-weight:800">This SafePointX JSON file is protected. Enter the PIN code to load it.</p>
+          <p style="margin-bottom:12px;color:var(--muted);font-weight:800">${safe(fileName || "Inspection JSON")} ${attemptNo>1 ? "· Attempt " + attemptNo + " of 3" : ""}</p>
+          <label style="display:block;font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">PIN Code</label>
+          <input id="jsonAccessPinInput" type="password" inputmode="numeric" autocomplete="off" style="width:100%;border:1px solid var(--field-border);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--field-text);background:var(--field-bg);outline:none" />
+        </div>
+        <div class="app-modal-actions" style="gap:8px">
+          <button class="btn btn-warning" type="button" id="jsonPinCancelBtn">Cancel</button>
+          <button class="btn btn-soft" type="button" id="jsonPinLoadBtn">Load JSON</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector("#jsonAccessPinInput");
+    const cancel = overlay.querySelector("#jsonPinCancelBtn");
+    const load = overlay.querySelector("#jsonPinLoadBtn");
+    const close = value => { overlay.remove(); resolve(value); };
+    cancel.addEventListener("click",()=>close(null));
+    load.addEventListener("click",()=>{
+      const pin = input.value.trim();
+      if(!pin){ input.focus(); input.style.borderColor="#ef4444"; return; }
+      close(pin);
+    });
+    input.addEventListener("keydown",e=>{
+      if(e.key==="Enter") load.click();
+      if(e.key==="Escape") cancel.click();
+    });
+    setTimeout(()=>input.focus(),80);
+  });
+}
+
+async function decryptJsonAccessPayload(meta, pin){
+  if(!window.crypto || !crypto.subtle) throw new Error("This browser does not support secure JSON decryption. Please use a modern Chrome, Edge, Safari, or Firefox browser.");
+  const iterations = Number(meta.iterations || 120000);
+  const salt = base64ToUint8Array(meta.salt_base64);
+  const iv = base64ToUint8Array(meta.iv_base64);
+  const cipher = base64ToUint8Array(meta.ciphertext_base64);
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(pin), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt, iterations, hash:"SHA-256"},
+    keyMaterial,
+    {name:"AES-GCM", length:256},
+    false,
+    ["decrypt"]
+  );
+  const aadText = meta.aad || "SafePointX Food Safety JSON Access v1";
+  const plainBuffer = await crypto.subtle.decrypt(
+    {name:"AES-GCM", iv, additionalData:encoder.encode(aadText), tagLength:128},
+    key,
+    cipher
+  );
+  return JSON.parse(new TextDecoder().decode(plainBuffer));
+}
+
+async function verifyJsonAccessBeforeLoad(rawData, fileName){
+  const meta = getJsonAccessMeta(rawData);
+  if(!meta) return true; // backward compatibility for older unprotected JSON files
+  let lastError = "";
+  for(let attempt=1; attempt<=3; attempt++){
+    const pin = await promptJsonPinCode(fileName, attempt);
+    if(pin === null){
+      showAppModal("JSON Load Cancelled", "The protected JSON file was not loaded because the PIN entry was cancelled.", {tone:"warning",icon:"ℹ️"});
+      return false;
+    }
+    try{
+      const access = await decryptJsonAccessPayload(meta, pin);
+      const expiry = String(access.expiry_date || "").trim();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(expiry)){
+        showAppModal("Invalid JSON Access Data", "The encrypted expiry date inside this JSON file is invalid. The file cannot be loaded.", {tone:"error",icon:"⛔"});
+        return false;
+      }
+      if(localIsoDateToday() > expiry){
+        showAppModal(
+          "JSON File Expired",
+          `This SafePointX inspection JSON expired on <b>${safe(formatIsoDateForUser(expiry))}</b>.<br><br>The file was not loaded. Please export a new JSON file from the SafePointX Python application.`,
+          {tone:"error",icon:"⛔"}
+        );
+        return false;
+      }
+      rawData.json_access_verified = true;
+      rawData.json_access_verified_at = new Date().toISOString();
+      return true;
+    }catch(err){
+      lastError = err && err.message ? err.message : String(err);
+      if(attempt < 3){
+        showAppModal("Invalid PIN", "The PIN code is not correct. Please try again.", {tone:"warning",icon:"⚠️"});
+      }
+    }
+  }
+  showAppModal("JSON Access Denied", "The JSON file was not loaded after 3 incorrect PIN attempts.", {tone:"error",icon:"⛔"});
+  console.warn("JSON access decrypt failed", lastError);
+  return false;
+}
+
+async function loadJsonTextWithAccessControl(jsonText, fileName, handle=null, options={}){
+  const parsed = JSON.parse(jsonText);
+  const ok = await verifyJsonAccessBeforeLoad(parsed, fileName);
+  if(!ok) return false;
+  loadedData = validateAppJson(parsed);
+  loadedFileName = fileName || "SafePointX_InspectionPlan.json";
+  originalFileName = loadedFileName;
+  writableFileHandle = handle;
+  afterLoad();
+  if(options.note) showSaveShareNote(options.note);
+  if(options.toast) toast(options.toast);
+  return true;
+}
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     closeAppModal();
@@ -1302,23 +1684,189 @@ function validateAppJson(data){
   return data;
 }
 
+function splitMultiValue(value){
+  if(Array.isArray(value)) return value.map(x=>String(x||"").trim()).filter(Boolean);
+  return String(value||"").split(/[,;|]+/).map(x=>x.trim()).filter(Boolean);
+}
+function uniqueStrings(values){
+  const out=[]; const seen=new Set();
+  (values||[]).forEach(v=>{
+    v=String(v||"").trim();
+    if(!v) return;
+    const key=v.toLowerCase();
+    if(seen.has(key)) return;
+    seen.add(key); out.push(v);
+  });
+  return out.sort((a,b)=>a.localeCompare(b));
+}
+function normalizeNameList(value,keys){
+  if(!Array.isArray(value)) return [];
+  const out=[];
+  value.forEach(entry=>{
+    if(entry===undefined || entry===null) return;
+    if(typeof entry==="string" || typeof entry==="number"){
+      out.push(String(entry));
+      return;
+    }
+    if(typeof entry==="object"){
+      for(const key of keys){
+        const v=entry[key];
+        if(v!==undefined && v!==null && String(v).trim()!==""){
+          out.push(String(v));
+          return;
+        }
+      }
+    }
+  });
+  return uniqueStrings(out);
+}
+function getLookupLists(){
+  const d=loadedData || {};
+  const h=d.report_header || {};
+  return d.lookup_lists || d.master_lists || d.selection_options || d.pick_lists || h.lookup_lists || h.selection_options || {};
+}
+function getEvaluatorOptionSets(){
+  const d=loadedData || {};
+  const h=d.report_header || {};
+  const lookup=getLookupLists();
+  const selectedProperties=splitMultiValue(firstValue(h.property_name,h.hotel_name,h.property));
+  const selectedOutlets=splitMultiValue(firstValue(h.outlet_name,h.location_outlet,h.outlet,h.location));
+  const selectedDepartments=splitMultiValue(firstValue(h.department_name,h.department));
+
+  const properties=uniqueStrings([
+    ...normalizeNameList(lookup.properties,["property_name","name","property","label","title"]),
+    ...normalizeNameList(lookup.property_names,["property_name","name","property","label","title"]),
+    ...normalizeNameList(h.available_properties,["property_name","name","property","label","title"]),
+    ...selectedProperties
+  ]);
+  const departments=uniqueStrings([
+    ...normalizeNameList(lookup.departments,["department_name","name","department","label","title"]),
+    ...normalizeNameList(lookup.department_names,["department_name","name","department","label","title"]),
+    ...normalizeNameList(h.available_departments,["department_name","name","department","label","title"]),
+    ...selectedDepartments
+  ]);
+
+  const outletRecords=[];
+  const addOutletRecord=(outlet,property="")=>{
+    outlet=String(outlet||"").trim(); property=String(property||"").trim();
+    if(!outlet) return;
+    const key=(property+"\u0000"+outlet).toLowerCase();
+    if(outletRecords.some(x=>x.key===key)) return;
+    outletRecords.push({key,property_name:property,outlet_name:outlet});
+  };
+  const recordSources=[lookup.outlet_records,lookup.outlets_by_property,lookup.outlets,h.available_outlets];
+  recordSources.forEach(src=>{
+    if(!Array.isArray(src)) return;
+    src.forEach(entry=>{
+      if(typeof entry==="string" || typeof entry==="number") addOutletRecord(entry,"");
+      else if(entry && typeof entry==="object"){
+        const outlet=firstValue(entry.outlet_name,entry.name,entry.outlet,entry.location_outlet,entry.location,entry.label,entry.title);
+        const property=firstValue(entry.property_name,entry.property,entry.hotel_name,entry.hotel,entry.property_label);
+        addOutletRecord(outlet,property);
+      }
+    });
+  });
+  normalizeNameList(lookup.outlet_names,["outlet_name","name","outlet","label","title"]).forEach(x=>addOutletRecord(x,""));
+  selectedOutlets.forEach(x=>addOutletRecord(x,selectedProperties[0]||""));
+  const outlets=uniqueStrings(outletRecords.map(x=>x.outlet_name));
+  return {properties,departments,outletRecords,outlets,selectedProperties,selectedDepartments,selectedOutlets};
+}
+function outletsForProperty(optionSets,property){
+  property=String(property||"").trim();
+  const records=optionSets.outletRecords || [];
+  if(property){
+    const filtered=records.filter(x=>!x.property_name || x.property_name.toLowerCase()===property.toLowerCase()).map(x=>x.outlet_name);
+    if(filtered.length) return uniqueStrings(filtered);
+  }
+  return uniqueStrings((records.length?records.map(x=>x.outlet_name):optionSets.outlets) || []);
+}
+function selectOptionsHtml(options,selected,placeholder){
+  selected=String(selected||"").trim();
+  return '<option value="">'+safe(placeholder||"Select")+'</option>' + (options||[]).map(opt=>{
+    const isSel=opt.toLowerCase()===selected.toLowerCase();
+    return '<option value="'+safe(opt)+'" '+(isSel?'selected':'')+'>'+safe(opt)+'</option>';
+  }).join('');
+}
+function buildLockedSelectField(id,label,value,required,options,placeholder){
+  return `<div class="eval-field">
+    <label>${safe(label)} ${required ? '<span class="required">*</span>' : ''}</label>
+    <select id="eval_${id}" ${required ? 'data-required="1"' : ''}>${selectOptionsHtml(options,value,placeholder)}</select>
+  </div>`;
+}
+function buildLockedMultiField(id,label,selectedValues,required,options,placeholder){
+  selectedValues=splitMultiValue(selectedValues);
+  const selectedSet=new Set(selectedValues.map(x=>x.toLowerCase()));
+  const allOptions=uniqueStrings([...(options||[]),...selectedValues]);
+  const display=selectedValues.length ? selectedValues.join(', ') : (placeholder || 'Select');
+  const checks=allOptions.map(opt=>{
+    const checked=selectedSet.has(String(opt).toLowerCase()) ? 'checked' : '';
+    return `<label class="eval-multi-option"><input type="checkbox" value="${safe(opt)}" ${checked}> <span>${safe(opt)}</span></label>`;
+  }).join('') || `<div class="eval-multi-placeholder">No saved list values found in this JSON.</div>`;
+  return `<div class="eval-field">
+    <label>${safe(label)} ${required ? '<span class="required">*</span>' : ''}</label>
+    <details class="eval-multi-box" id="eval_${id}_box"><summary><span id="eval_${id}_summary">${safe(display)}</span></summary><div class="eval-multi-list">${checks}</div></details>
+    <input type="hidden" id="eval_${id}" value="${safe(selectedValues.join(', '))}" ${required ? 'data-required="1"' : ''}>
+  </div>`;
+}
+function updateEvaluatorMulti(id){
+  const box=$("eval_"+id+"_box");
+  const hidden=$("eval_"+id);
+  const summary=$("eval_"+id+"_summary");
+  if(!box || !hidden) return;
+  const chosen=Array.from(box.querySelectorAll('input[type="checkbox"]:checked')).map(x=>x.value.trim()).filter(Boolean);
+  hidden.value=chosen.join(', ');
+  if(summary) summary.textContent=chosen.length ? chosen.join(', ') : (id==="department_name" ? "Select department(s)" : "Select outlet(s)");
+  hidden.classList.remove("field-error");
+  box.classList.remove("field-error");
+  collectReportInfo();
+}
+function refreshOutletPickerForProperty(){
+  const propertyEl=$("eval_property_name");
+  const outletBox=$("eval_outlet_name_box");
+  const outletHidden=$("eval_outlet_name");
+  if(!propertyEl || !outletBox || !outletHidden) return;
+  const opts=getEvaluatorOptionSets();
+  const allowed=outletsForProperty(opts,propertyEl.value);
+  const current=splitMultiValue(outletHidden.value).filter(x=>allowed.some(o=>o.toLowerCase()===x.toLowerCase()));
+  const selectedSet=new Set(current.map(x=>x.toLowerCase()));
+  const checks=allowed.map(opt=>`<label class="eval-multi-option"><input type="checkbox" value="${safe(opt)}" ${selectedSet.has(opt.toLowerCase())?'checked':''}> <span>${safe(opt)}</span></label>`).join('') || '<div class="eval-multi-placeholder">No outlets saved for the selected property.</div>';
+  const list=outletBox.querySelector(".eval-multi-list");
+  if(list) list.innerHTML=checks;
+  outletBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener("change",()=>updateEvaluatorMulti("outlet_name")));
+  updateEvaluatorMulti("outlet_name");
+}
+
 function loadReportInfo(){
   const h=loadedData.report_header || {};
-  const fields=[
-    ["property_name","Hotel / Property Name",h.property_name || h.hotel_name || "",true,"text"],
-    ["outlet_name","Location / Outlet",h.outlet_name || h.location_outlet || "",true,"text"],
-    ["department_name","Department",h.department_name || "",true,"text"],
-    ["inspection_date","Inspection Date & Time",h.inspection_date || "",true,"datetime-local"],
-    ["person_on_duty","Person on Duty",h.person_on_duty || "",true,"text"],
-    ["inspector_name","Inspection Done By",h.inspector_name || h.auditor_name || "",true,"text"]
+  const opts=getEvaluatorOptionSets();
+  const propertyValue=firstValue(h.property_name,h.hotel_name,h.property);
+  const outletOptions=outletsForProperty(opts,propertyValue);
+  const fieldsHtml=[
+    buildLockedSelectField("property_name","Hotel / Property Name",propertyValue,true,opts.properties,"Select property"),
+    buildLockedMultiField("outlet_name","Location / Outlet",firstValue(h.outlet_name,h.location_outlet,h.outlet,h.location),true,outletOptions,"Select outlet(s)"),
+    buildLockedMultiField("department_name","Department",firstValue(h.department_name,h.department),true,opts.departments,"Select department(s)"),
+    `<div class="eval-field"><label>Inspection Date &amp; Time <span class="required">*</span></label><input id="eval_inspection_date" type="datetime-local" value="${safe(normalizeDateForInput('datetime-local',h.inspection_date || ''))}" data-required="1"></div>`,
+    `<div class="eval-field"><label>Person on Duty <span class="required">*</span></label><input id="eval_person_on_duty" type="text" value="${safe(h.person_on_duty || '')}" data-required="1"></div>`,
+    `<div class="eval-field"><label>Inspection Done By <span class="required">*</span></label><input id="eval_inspector_name" type="text" value="${safe(h.inspector_name || h.auditor_name || '')}" data-required="1"></div>`
   ];
-  $("reportInfoGrid").innerHTML=fields.map(([id,label,value,required,type])=>`
-    <div class="eval-field">
-      <label>${safe(label)} ${required ? '<span class="required">*</span>' : ''}</label>
-      <input id="eval_${id}" type="${type}" value="${safe(normalizeDateForInput(type,value))}" ${required ? 'data-required="1"' : ''}>
-    </div>
-  `).join("");
-  fields.forEach(([id])=>{
+  $("reportInfoGrid").innerHTML=fieldsHtml.join("");
+
+  const propertyEl=$("eval_property_name");
+  if(propertyEl){
+    propertyEl.addEventListener("change",()=>{
+      propertyEl.classList.remove("field-error");
+      refreshOutletPickerForProperty();
+      collectReportInfo();
+    });
+  }
+  ["outlet_name","department_name"].forEach(id=>{
+    const box=$("eval_"+id+"_box");
+    if(box){
+      box.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener("change",()=>updateEvaluatorMulti(id)));
+    }
+    updateEvaluatorMulti(id);
+  });
+  ["inspection_date","person_on_duty","inspector_name"].forEach(id=>{
     const el=$("eval_"+id);
     if(el) el.addEventListener("input",()=>{el.classList.remove("field-error");collectReportInfo();});
   });
@@ -1486,11 +2034,14 @@ function validateReportInfoBeforeSave(){
   let firstMissingEl=null;
 
   document.querySelectorAll("#reportInfoGrid input[data-required='1'], #reportInfoGrid select[data-required='1']").forEach(el=>{
-    const ok=!!el.value.trim();
-    el.classList.toggle("field-error",!ok);
+    const ok=!!String(el.value||"").trim();
+    const field=el.closest(".eval-field");
+    const multiBox=field ? field.querySelector(".eval-multi-box") : null;
+    if(multiBox) multiBox.classList.toggle("field-error",!ok);
+    else el.classList.toggle("field-error",!ok);
     if(!ok){
-      if(!firstMissingEl) firstMissingEl=el;
-      const label=el.closest(".eval-field").querySelector("label").textContent.replace("*","").trim();
+      if(!firstMissingEl) firstMissingEl=multiBox || el;
+      const label=field ? field.querySelector("label").textContent.replace("*","").trim() : "Required field";
       missing.push("Report Information: " + label);
     }
   });
@@ -1903,6 +2454,14 @@ function photoTransform(rotation){
   return `rotate(${rotation}deg) scale(${needsScale ? 0.74 : 1})`;
 }
 
+function pdfPhotoTransform(rotation){
+  rotation = ((Number(rotation)||0) % 360 + 360) % 360;
+  const needsScale = rotation === 90 || rotation === 270;
+  // Normal photos must show at natural full-frame size. Only 90/270 rotations
+  // are scaled down enough to stay fully visible inside the photo frame.
+  return `rotate(${rotation}deg)${needsScale ? ' scale(0.76)' : ''}`;
+}
+
 function normalizePhotoObject(photos,idx){
   const current = photos[idx];
   if(current && typeof current === "object") return current;
@@ -1982,14 +2541,11 @@ $("jsonInput").addEventListener("change",event=>{
   const file=event.target.files[0];
   if(!file) return;
   const reader=new FileReader();
-  reader.onload=()=>{
+  reader.onload=async ()=>{
     try{
-      loadedData=validateAppJson(JSON.parse(reader.result));
-      loadedFileName=file.name;
-      originalFileName=file.name;
-      writableFileHandle=null;
-      afterLoad();
-      showSaveShareNote("Loaded through standard file input. This browser may not allow direct overwrite; Save JSON will use Save As/download fallback.");
+      await loadJsonTextWithAccessControl(reader.result, file.name, null, {
+        note:"Loaded through standard file input. This browser may not allow direct overwrite; Save JSON will use Save As/download fallback."
+      });
     }catch(err){
       showAppModal("Invalid JSON File", safe(err.message || String(err)), {tone:"error",icon:"⛔"});
     }finally{
@@ -2044,12 +2600,8 @@ async function openJsonFile(){
       });
       const file = await handle.getFile();
       const text = await file.text();
-      loadedData=validateAppJson(JSON.parse(text));
-      loadedFileName=file.name;
-      originalFileName=file.name;
-      writableFileHandle=handle;
-      afterLoad();
-      toast("JSON file loaded successfully");
+      const loaded = await loadJsonTextWithAccessControl(text, file.name, handle, {toast:"JSON file loaded successfully"});
+      if(loaded) return;
       return;
     }catch(err){
       if(err && err.name==="AbortError") return;
@@ -2208,18 +2760,16 @@ function scheduleAutoSaveDraft(reason="change"){
   autoSaveTimer=setTimeout(()=>autoSaveDraftBrowser(reason),700);
 }
 
-function restoreBrowserDraftOnRefresh(){
+async function restoreBrowserDraftOnRefresh(){
   try{
     const jsonText=localStorage.getItem(BROWSER_DRAFT_KEY);
     if(!jsonText) return false;
 
     isRestoringAutoDraft=true;
-    loadedData=validateAppJson(JSON.parse(jsonText));
-    loadedFileName=localStorage.getItem(BROWSER_DRAFT_KEY+"_name") || "Browser_Draft.json";
-    originalFileName=loadedFileName;
-    writableFileHandle=null;
-    afterLoad();
+    const name = localStorage.getItem(BROWSER_DRAFT_KEY+"_name") || "Browser_Draft.json";
+    const loaded = await loadJsonTextWithAccessControl(jsonText, name, null, {});
     isRestoringAutoDraft=false;
+    if(!loaded) return false;
 
     const savedAt=localStorage.getItem(BROWSER_DRAFT_KEY+"_time") || "";
     setDraftStatus("Restored draft: " + savedAt);
@@ -2261,18 +2811,16 @@ function attachAutoSaveListeners(){
   });
 }
 
-function loadDraftBrowser(){
+async function loadDraftBrowser(){
   try{
     const jsonText=localStorage.getItem(BROWSER_DRAFT_KEY);
     if(!jsonText){
       showAppModal("No Browser Draft Found", "No browser draft was found on this device/browser.", {tone:"warning",icon:"ℹ️"});
       return;
     }
-    loadedData=validateAppJson(JSON.parse(jsonText));
-    loadedFileName=localStorage.getItem(BROWSER_DRAFT_KEY+"_name") || "Browser_Draft.json";
-    originalFileName=loadedFileName;
-    writableFileHandle=null;
-    afterLoad();
+    const name = localStorage.getItem(BROWSER_DRAFT_KEY+"_name") || "Browser_Draft.json";
+    const loaded = await loadJsonTextWithAccessControl(jsonText, name, null, {});
+    if(!loaded) return;
     setDraftStatus("Loaded browser draft saved at: " + (localStorage.getItem(BROWSER_DRAFT_KEY+"_time") || ""));
     toast("Browser draft loaded");
   }catch(err){
@@ -2468,20 +3016,18 @@ async function saveJson(){
   }
 }
 
-window.addEventListener("DOMContentLoaded",()=>{
+window.addEventListener("DOMContentLoaded",async ()=>{
   attachAutoSaveListeners();
 
-  // If the page is refreshed or reopened, automatically restore the last saved browser draft.
-  const restored=restoreBrowserDraftOnRefresh();
-  if(!restored){
-    try{
-      const savedAt=localStorage.getItem(BROWSER_DRAFT_KEY+"_time");
-      const hasDraft=!!localStorage.getItem(BROWSER_DRAFT_KEY);
-      if(hasDraft && savedAt){
-        setDraftStatus("Draft available: " + savedAt);
-      }
-    }catch(_){}
-  }
+  // Do not auto-load protected browser drafts on page open.
+  // PIN verification must appear only after the user imports/loads a JSON file.
+  try{
+    const savedAt=localStorage.getItem(BROWSER_DRAFT_KEY+"_time");
+    const hasDraft=!!localStorage.getItem(BROWSER_DRAFT_KEY);
+    if(hasDraft && savedAt){
+      setDraftStatus("Draft available: " + savedAt + " · Import JSON to load with PIN");
+    }
+  }catch(_){}
 });
 
 /* ===== FINAL OVERRIDE: INSPECTION PDF SAME STYLE + ACTION PLAN HTML EXPORT ===== */
@@ -3111,11 +3657,14 @@ function buildPdfPhotoGrid(photos){
   const valid=photos.map((p,i)=>({p,src:getPhotoSrc(p),idx:i})).filter(x=>x.src);
   if(!valid.length) return '';
   const rows=[];
+  // EXACT 4-PHOTO ROW FIX:
+  // Previous build used r+=4 but slice(r,r+3), so the report showed only 3 photos
+  // per row while the CSS expected 4. Keep JavaScript and CSS synchronized.
   for(let r=0;r<valid.length;r+=4){
     const row=valid.slice(r,r+4).map((x,n)=>{
       const photoNo=r+n+1;
       const rot=getPhotoRotation(x.p);
-      return '<div class="pdf-photo-card"><div>Photo #'+photoNo+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(photoTransform(rot))+'" /></div>';
+      return '<div class="pdf-photo-card"><div>Photo #'+photoNo+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(pdfPhotoTransform(rot))+'" /></div>';
     }).join('');
     rows.push('<div class="pdf-photo-row">'+row+'</div>');
   }
@@ -3127,7 +3676,7 @@ function buildPdfGeneralPhotoGrid(photos){
   if(!valid.length) return '<p>No additional photos attached.</p>';
   return '<div class="pdf-general-photo-grid">'+valid.map((x,n)=>{
     const rot=getPhotoRotation(x.p);
-    return '<div class="pdf-general-photo-card"><div>General Photo #'+(n+1)+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(photoTransform(rot))+'" />'+(x.cap?'<div class="pdf-general-photo-caption">'+safe(x.cap)+'</div>':'')+'</div>';
+    return '<div class="pdf-general-photo-card"><div>General Photo #'+(n+1)+'</div><img src="'+safe(x.src)+'" style="transform:'+safe(pdfPhotoTransform(rot))+'" />'+(x.cap?'<div class="pdf-general-photo-caption">'+safe(x.cap)+'</div>':'')+'</div>';
   }).join('')+'</div>';
 }
 function spxStatusPill(status){ return '<span class="pdf-status '+ratingClass(status)+'">'+ratingLabel(status)+'</span>'; }
@@ -3152,7 +3701,7 @@ function estimatePdfItemHeight(it){
   if(comment) h += 26 + Math.min(105, Math.ceil(comment.length/82)*13);
   const photos=Array.isArray(it.photos_base64)?it.photos_base64:[];
   if(photos.length){
-    h += 6 + (128 * Math.ceil(photos.length/4));
+    h += 8 + (166 * Math.ceil(photos.length/4));
   }
   return h;
 }
@@ -3257,6 +3806,85 @@ function actionPlanCss(){ return `
 .ap-info-cell:nth-child(3n){border-right:none!important}
 .ap-info-cell:nth-last-child(-n+3){border-bottom:none!important}
 @media(max-width:900px){.ap-page{width:100%;height:auto;min-height:297mm;overflow:visible}.ap-evidence-grid,.ap-photo-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:640px){body{padding:6px}.toolbar{display:grid;grid-template-columns:1fr}.ap-info-grid,.ap-head-grid,.ap-meta{grid-template-columns:1fr}.ap-evidence-grid,.ap-photo-grid{grid-template-columns:1fr}.ap-shot img{height:170px;max-height:170px}}@media print{body{padding:0;background:#fff}.toolbar,.validation,.ap-shot-tools,.ap-add{display:none!important}.ap-page{margin:0;box-shadow:none;border:none;width:210mm;height:297mm;overflow:hidden}.ap-evidence-grid,.ap-photo-grid{grid-template-columns:repeat(2,255px)!important;justify-content:center!important;gap:16px!important;padding:3.5mm!important}.ap-shot{width:255px!important;max-width:255px!important;margin:0 auto!important}.ap-shot img{height:152px!important;max-height:152px!important;width:100%!important;object-fit:contain!important;object-position:center!important;background:#fff!important;padding:18px!important;box-sizing:border-box!important;transform:none!important;filter:none!important}}
+
+
+
+/* ===== FINAL CLEAN ACTION PLAN PHOTO STANDARD =====
+   One final action-plan photo rule set. HTML and PDF export keep the full photo
+   visible with contain/center, no crop, no stretch, and no zoom-in. */
+.ap-evidence-grid,.ap-photo-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  padding:3mm!important;
+  align-items:start!important;
+}
+.ap-shot{
+  min-height:184px!important;
+  background:#fff!important;
+}
+.ap-shot img,
+.ap-evidence-grid.photo-many .ap-shot img,
+.ap-photo-grid.photo-many .ap-shot img,
+.ap-evidence-grid.photo-count-5 .ap-shot img,
+.ap-evidence-grid.photo-count-6 .ap-shot img,
+.ap-evidence-grid.photo-count-7 .ap-shot img,
+.ap-evidence-grid.photo-count-8 .ap-shot img,
+.ap-evidence-grid.photo-count-more .ap-shot img,
+.ap-photo-grid.photo-count-5 .ap-shot img,
+.ap-photo-grid.photo-count-6 .ap-shot img,
+.ap-photo-grid.photo-count-7 .ap-shot img,
+.ap-photo-grid.photo-count-8 .ap-shot img,
+.ap-photo-grid.photo-count-more .ap-shot img{
+  width:100%!important;
+  height:158px!important;
+  min-height:158px!important;
+  max-height:158px!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  padding:8px!important;
+  box-sizing:border-box!important;
+  transform-origin:center center!important;
+  filter:none!important;
+  display:block!important;
+}
+.pdf-exporting .ap-evidence-grid,
+.pdf-exporting .ap-photo-grid{
+  grid-template-columns:repeat(2,270px)!important;
+  justify-content:center!important;
+  gap:16px!important;
+  padding:3.5mm!important;
+}
+.pdf-exporting .ap-shot{
+  width:270px!important;
+  max-width:270px!important;
+  min-height:208px!important;
+  margin:0 auto!important;
+}
+.pdf-exporting .ap-shot img,
+.pdf-exporting .ap-continuation-grid .ap-shot img{
+  width:100%!important;
+  height:184px!important;
+  min-height:184px!important;
+  max-height:184px!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#ffffff!important;
+  padding:14px!important;
+  box-sizing:border-box!important;
+  transform:none!important;
+  filter:none!important;
+  display:block!important;
+}
+@media(max-width:640px){
+  .ap-evidence-grid,.ap-photo-grid{grid-template-columns:1fr!important;}
+  .ap-shot img{height:210px!important;min-height:210px!important;max-height:210px!important;}
+}
+@media print{
+  .ap-evidence-grid,.ap-photo-grid{grid-template-columns:repeat(2,270px)!important;justify-content:center!important;gap:16px!important;padding:3.5mm!important;}
+  .ap-shot{width:270px!important;max-width:270px!important;min-height:208px!important;margin:0 auto!important;}
+  .ap-shot img{height:184px!important;min-height:184px!important;max-height:184px!important;width:100%!important;object-fit:contain!important;object-position:center center!important;background:#fff!important;padding:14px!important;box-sizing:border-box!important;transform:none!important;filter:none!important;}
+}
 `; }
 </script>
 </body>
