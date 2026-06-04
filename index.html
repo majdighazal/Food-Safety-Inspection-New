@@ -1414,6 +1414,9 @@ let loadedFileName="";
 let originalFileName="";
 let writableFileHandle=null;
 let itemPhotoTarget=null;
+let activeJsonPin="";
+let activeJsonEncryptedMode=false;
+let activeJsonEncryptionSourceMeta=null;
 
 const $=id=>document.getElementById(id);
 
@@ -1462,6 +1465,142 @@ function closeAppModal(){
 }
 
 
+
+function isEncryptedJsonWrapper(data){
+  return !!(data && typeof data === "object" && data.encrypted_payload === true && data.ciphertext_base64 && data.salt_base64 && data.iv_base64);
+}
+
+async function deriveSafePointJsonKey(pin, salt, iterations, usage){
+  if(!window.crypto || !crypto.subtle) throw new Error("This browser does not support secure JSON decryption. Please use a modern Chrome, Edge, Safari, or Firefox browser.");
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(pin), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt, iterations:Number(iterations || 120000), hash:"SHA-256"},
+    keyMaterial,
+    {name:"AES-GCM", length:256},
+    false,
+    usage
+  );
+}
+
+async function decryptFullJsonWrapper(wrapper, pin){
+  const salt = base64ToUint8Array(wrapper.salt_base64);
+  const iv = base64ToUint8Array(wrapper.iv_base64);
+  const cipher = base64ToUint8Array(wrapper.ciphertext_base64);
+  const aadText = wrapper.aad || "SafePointX Food Safety Full JSON v2";
+  const encoder = new TextEncoder();
+  const key = await deriveSafePointJsonKey(pin, salt, wrapper.iterations || 120000, ["decrypt"]);
+  const plainBuffer = await crypto.subtle.decrypt(
+    {name:"AES-GCM", iv, additionalData:encoder.encode(aadText), tagLength:128},
+    key,
+    cipher
+  );
+  const decrypted = JSON.parse(new TextDecoder().decode(plainBuffer));
+  if(!decrypted || typeof decrypted !== "object") throw new Error("Decrypted JSON payload is invalid.");
+  return decrypted;
+}
+
+function getJsonExpiryFromDecryptedData(data){
+  if(!data || typeof data !== "object") return "";
+  const meta = data.json_access || data.access_control || (data.security && data.security.json_access) || {};
+  return String(meta.expiry_date || data.expiry_date || "").trim();
+}
+
+function setJsonAccessRuntime(pin, encryptedMode, sourceMeta){
+  activeJsonPin = String(pin || "");
+  activeJsonEncryptedMode = !!encryptedMode || !!activeJsonPin;
+  activeJsonEncryptionSourceMeta = sourceMeta || null;
+}
+
+function clearJsonAccessRuntime(){
+  activeJsonPin="";
+  activeJsonEncryptedMode=false;
+  activeJsonEncryptionSourceMeta=null;
+}
+
+async function decryptEncryptedJsonBeforeLoad(wrapper, fileName){
+  let attempt = 1;
+  let pinError = "";
+  while(true){
+    const pin = await promptJsonPinCode(fileName, attempt, pinError);
+    if(pin === null){
+      showAppModal("JSON Load Cancelled", "The protected JSON file was not loaded because the PIN entry was cancelled.", {tone:"warning",icon:"ℹ️"});
+      return null;
+    }
+    try{
+      const decrypted = await decryptFullJsonWrapper(wrapper, pin);
+      const expiry = getJsonExpiryFromDecryptedData(decrypted);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(expiry)){
+        showAppModal("Invalid JSON Access Data", "The encrypted expiry date inside this JSON file is invalid. The file cannot be loaded.", {tone:"error",icon:"⛔"});
+        return null;
+      }
+      if(localIsoDateToday() > expiry){
+        showAppModal(
+          "JSON File Expired",
+          `This SafePointX inspection JSON expired on <b>${safe(formatIsoDateForUser(expiry))}</b>.<br><br>The file was not loaded. Please export a new JSON file from the SafePointX Python application.`,
+          {tone:"error",icon:"⛔"}
+        );
+        return null;
+      }
+      decrypted.json_access = decrypted.json_access || {};
+      decrypted.json_access.protected = true;
+      decrypted.json_access.version = 2;
+      decrypted.json_access.full_payload_encrypted = true;
+      decrypted.json_access.expiry_date = expiry;
+      decrypted.json_access.expiry_date_encrypted = false;
+      decrypted.json_access_verified = true;
+      decrypted.json_access_verified_at = new Date().toISOString();
+      setJsonAccessRuntime(pin, true, wrapper);
+      return decrypted;
+    }catch(err){
+      console.warn("Full JSON decrypt failed", err && err.message ? err.message : String(err));
+      attempt += 1;
+      pinError = "The PIN code is not correct. Please try again. A correct PIN will decrypt and load the JSON immediately.";
+    }
+  }
+}
+
+async function encryptFullJsonForSaving(plainText, pin){
+  if(!String(pin || "").trim()) return plainText;
+  if(!window.crypto || !crypto.subtle) throw new Error("This browser does not support secure JSON encryption. Please use a modern Chrome, Edge, Safari, or Firefox browser.");
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iterations = 120000;
+  const aadText = "SafePointX Food Safety Full JSON v2";
+  const encoder = new TextEncoder();
+  const key = await deriveSafePointJsonKey(pin, salt, iterations, ["encrypt"]);
+  const cipherBuffer = await crypto.subtle.encrypt(
+    {name:"AES-GCM", iv, additionalData:encoder.encode(aadText), tagLength:128},
+    key,
+    encoder.encode(plainText)
+  );
+  const wrapper = {
+    source:"SafePointX Food Safety",
+    file_type:"SafePointX Encrypted Inspection JSON",
+    schema_version:"2.0",
+    encrypted_payload:true,
+    protected:true,
+    version:2,
+    algorithm:"PBKDF2-SHA256-AES-256-GCM",
+    iterations,
+    salt_base64:uint8ArrayToBase64(salt),
+    iv_base64:uint8ArrayToBase64(iv),
+    ciphertext_base64:uint8ArrayToBase64(new Uint8Array(cipherBuffer)),
+    aad:aadText,
+    created_by:"SafePointX HTML Evaluator",
+    created_at:new Date().toISOString(),
+    notice:"This file is fully encrypted. Open it with the SafePointX HTML evaluator and enter the correct PIN."
+  };
+  return JSON.stringify(wrapper);
+}
+
+async function encryptJsonForOutputIfNeeded(plainText){
+  if(activeJsonEncryptedMode && activeJsonPin){
+    return await encryptFullJsonForSaving(plainText, activeJsonPin);
+  }
+  return plainText;
+}
+
 function getJsonAccessMeta(data){
   if(!data || typeof data !== "object") return null;
   const meta = data.json_access || data.access_control || (data.security && data.security.json_access);
@@ -1475,6 +1614,15 @@ function base64ToUint8Array(value){
   const bytes = new Uint8Array(binary.length);
   for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
   return bytes;
+}
+
+function uint8ArrayToBase64(bytes){
+  let binary="";
+  const chunkSize=0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i,i+chunkSize));
+  }
+  return btoa(binary);
 }
 
 function localIsoDateToday(){
@@ -1539,20 +1687,11 @@ function promptJsonPinCode(fileName, attemptNo=1, errorMessage=""){
 }
 
 async function decryptJsonAccessPayload(meta, pin){
-  if(!window.crypto || !crypto.subtle) throw new Error("This browser does not support secure JSON decryption. Please use a modern Chrome, Edge, Safari, or Firefox browser.");
-  const iterations = Number(meta.iterations || 120000);
   const salt = base64ToUint8Array(meta.salt_base64);
   const iv = base64ToUint8Array(meta.iv_base64);
   const cipher = base64ToUint8Array(meta.ciphertext_base64);
   const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(pin), "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey(
-    {name:"PBKDF2", salt, iterations, hash:"SHA-256"},
-    keyMaterial,
-    {name:"AES-GCM", length:256},
-    false,
-    ["decrypt"]
-  );
+  const key = await deriveSafePointJsonKey(pin, salt, meta.iterations || 120000, ["decrypt"]);
   const aadText = meta.aad || "SafePointX Food Safety JSON Access v1";
   const plainBuffer = await crypto.subtle.decrypt(
     {name:"AES-GCM", iv, additionalData:encoder.encode(aadText), tagLength:128},
@@ -1592,8 +1731,15 @@ async function verifyJsonAccessBeforeLoad(rawData, fileName){
         return false;
       }
       closeAppModal();
+      rawData.json_access = rawData.json_access || {};
+      rawData.json_access.protected = true;
+      rawData.json_access.version = 2;
+      rawData.json_access.full_payload_encrypted = true;
+      rawData.json_access.expiry_date = expiry;
+      rawData.json_access.expiry_date_encrypted = false;
       rawData.json_access_verified = true;
       rawData.json_access_verified_at = new Date().toISOString();
+      setJsonAccessRuntime(pin, true, meta);
       return true;
     }catch(err){
       console.warn("JSON access decrypt failed", err && err.message ? err.message : String(err));
@@ -1604,9 +1750,16 @@ async function verifyJsonAccessBeforeLoad(rawData, fileName){
 }
 
 async function loadJsonTextWithAccessControl(jsonText, fileName, handle=null, options={}){
-  const parsed = JSON.parse(jsonText);
-  const ok = await verifyJsonAccessBeforeLoad(parsed, fileName);
-  if(!ok) return false;
+  const parsedWrapper = JSON.parse(jsonText);
+  let parsed = parsedWrapper;
+  clearJsonAccessRuntime();
+  if(isEncryptedJsonWrapper(parsedWrapper)){
+    parsed = await decryptEncryptedJsonBeforeLoad(parsedWrapper, fileName);
+    if(!parsed) return false;
+  }else{
+    const ok = await verifyJsonAccessBeforeLoad(parsed, fileName);
+    if(!ok) return false;
+  }
   loadedData = validateAppJson(parsed);
   loadedFileName = fileName || "SafePointX_InspectionPlan.json";
   originalFileName = loadedFileName;
@@ -2601,6 +2754,7 @@ function clearLoadedNow(){
   loadedFileName="";
   originalFileName="";
   writableFileHandle=null;
+  clearJsonAccessRuntime();
   $("reportSheet").classList.add("hidden");
   $("emptyState").classList.remove("hidden");
   $("saveBtn").disabled=true;
@@ -2722,7 +2876,7 @@ function confirmClearLoaded(){
   clearLoadedNow();
 }
 
-function prepareJsonForOutput(){
+function preparePlainJsonForOutput(){
   if(!loadedData) throw new Error("Please import a SafePointX inspection plan JSON file first.");
   collectReportInfo();
   collectApplicationSummary();
@@ -2736,7 +2890,22 @@ function prepareJsonForOutput(){
   loadedData.updated_at=new Date().toISOString();
   loadedData.evaluator_saved_at=new Date().toISOString();
   loadedData.evaluator_mode="inspection_plan_completed";
+  loadedData.json_access = loadedData.json_access || {};
+  if(activeJsonEncryptedMode){
+    loadedData.json_access.protected = true;
+    loadedData.json_access.version = 2;
+    loadedData.json_access.full_payload_encrypted = true;
+    loadedData.json_access.expiry_date_encrypted = false;
+    loadedData.json_access.algorithm = "PBKDF2-SHA256-AES-256-GCM";
+    loadedData.json_access.updated_at = new Date().toISOString();
+  }
   return JSON.stringify(loadedData);
+}
+
+async function prepareJsonForOutput(){
+  const plainText = preparePlainJsonForOutput();
+  if(!plainText) return null;
+  return await encryptJsonForOutputIfNeeded(plainText);
 }
 
 function getOutputFileName(){
@@ -2751,7 +2920,7 @@ function setDraftStatus(msg){
 let autoSaveTimer=null;
 let isRestoringAutoDraft=false;
 
-function autoSaveDraftBrowser(reason="auto"){
+async function autoSaveDraftBrowser(reason="auto"){
   if(!loadedData || isRestoringAutoDraft) return;
   try{
     collectReportInfo();
@@ -2764,7 +2933,8 @@ function autoSaveDraftBrowser(reason="auto"){
     loadedData.updated_at=new Date().toISOString();
     loadedData.evaluator_auto_saved_at=new Date().toISOString();
 
-    const jsonText=JSON.stringify(loadedData);
+    const plainText=JSON.stringify(loadedData);
+    const jsonText=await encryptJsonForOutputIfNeeded(plainText);
     const fileName=getOutputFileName();
     const savedAt=new Date().toLocaleString();
 
@@ -3008,7 +3178,7 @@ function downloadJsonText(jsonText,fileName){
 
 async function saveJson(){
   try{
-    const jsonText=prepareJsonForOutput();
+    const jsonText=await prepareJsonForOutput();
     if(!jsonText) return;
     const fileName=getOutputFileName();
 
