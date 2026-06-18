@@ -2537,10 +2537,44 @@ function renderItem(item){
     input.type="file";
     input.accept="image/*";
     input.multiple=true;
-    input.onchange=async ()=>{
-      await addPhotosToItem(item,input.files);
-      drawPhotos(row,item);
+    input.className="file-input";
+    input.setAttribute("aria-hidden","true");
+    input.style.display="block";
+    input.style.position="fixed";
+    input.style.left="-9999px";
+    input.style.top="0";
+    input.style.width="1px";
+    input.style.height="1px";
+    input.style.opacity="0";
+    input.style.pointerEvents="none";
+
+    let selectionStarted=false;
+    const cleanup=()=>{
+      input.value="";
+      if(input.parentNode) input.parentNode.removeChild(input);
+      window.removeEventListener("focus",cleanupAfterCancel);
     };
+    const cleanupAfterCancel=()=>{
+      setTimeout(()=>{
+        if(!selectionStarted) cleanup();
+      },500);
+    };
+
+    input.addEventListener("change",async ()=>{
+      selectionStarted=true;
+      const selectedFiles=Array.from(input.files||[]);
+      try{
+        if(selectedFiles.length){
+          await addPhotosToItem(item,selectedFiles);
+          drawPhotos(row,item);
+        }
+      }finally{
+        cleanup();
+      }
+    });
+
+    document.body.appendChild(input);
+    window.addEventListener("focus",cleanupAfterCancel);
     input.click();
   });
 
