@@ -3681,6 +3681,27 @@ function cleanupActionPlanMetaFieldsForPdf(){
     ['font-size','font-weight','letter-spacing','text-align','text-align-last','height','min-height','line-height','padding','white-space','overflow'].forEach(p=>el.style.removeProperty(p));
   });
 }
+function prepareActionPlanTextareasForPdf(){
+  document.querySelectorAll('textarea.ap-field').forEach(textarea=>{
+    if(textarea.dataset.pdfMirrorId) return;
+    const mirror=document.createElement('div');
+    const mirrorId='ap-pdf-textarea-'+Math.random().toString(36).slice(2);
+    mirror.id=mirrorId;
+    mirror.className='ap-field ap-pdf-textarea-render';
+    mirror.textContent=textarea.value || textarea.placeholder || '';
+    textarea.dataset.pdfMirrorId=mirrorId;
+    textarea.classList.add('ap-pdf-source-hidden');
+    textarea.insertAdjacentElement('afterend',mirror);
+  });
+}
+function cleanupActionPlanTextareasForPdf(){
+  document.querySelectorAll('textarea.ap-field[data-pdf-mirror-id]').forEach(textarea=>{
+    const mirror=document.getElementById(textarea.dataset.pdfMirrorId);
+    if(mirror) mirror.remove();
+    delete textarea.dataset.pdfMirrorId;
+    textarea.classList.remove('ap-pdf-source-hidden');
+  });
+}
 async function exportActionPlanPdf(){
   document.querySelectorAll('.ap-progress-select').forEach(applyProgressColor);
   if(!validatePlan()) return;
@@ -3697,6 +3718,7 @@ async function exportActionPlanPdf(){
     const pdf=new jsPDF('p','mm','a4');
     document.body.classList.add('pdf-exporting');
     fitActionPlanMetaFieldsForPdf();
+    prepareActionPlanTextareasForPdf();
     prepareEvidenceContinuationPages();
     document.querySelectorAll('.ap-evidence-grid,.ap-photo-grid').forEach(updateEvidenceGridLayout);
     const pages=Array.from(document.querySelectorAll('.ap-page'));
@@ -3731,6 +3753,7 @@ async function exportActionPlanPdf(){
     showValidation(['Could not generate PDF: '+(err.message||err)]);
   }finally{
     cleanupEvidenceContinuationPages();
+    cleanupActionPlanTextareasForPdf();
     cleanupActionPlanMetaFieldsForPdf();
     document.body.classList.remove('pdf-exporting');
     if(root) root.removeAttribute('aria-busy');
@@ -4104,6 +4127,23 @@ function actionPlanCss(){ return `
   transform:none!important;
   filter:none!important;
   display:block!important;
+}
+.pdf-exporting textarea.ap-pdf-source-hidden{
+  display:none!important;
+}
+.pdf-exporting .ap-pdf-textarea-render{
+  display:block!important;
+  height:auto!important;
+  min-height:22mm!important;
+  overflow:visible!important;
+  white-space:pre-wrap!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  line-height:1.4!important;
+  padding:2.4mm 2.6mm!important;
+  text-align:left!important;
+  font-size:12px!important;
+  font-weight:800!important;
 }
 @media(max-width:640px){
   .ap-evidence-grid,.ap-photo-grid{grid-template-columns:1fr!important;}
