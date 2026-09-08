@@ -92,7 +92,6 @@ body{font-family:"Segoe UI",Inter,Arial,sans-serif;color:var(--text);background:
 .check-row.row-unrated{border-color:var(--line);background:var(--check-row-bg)}
 .check-title{font-size:13px;font-weight:800;line-height:1.45;grid-area:title;color:var(--text);padding-right:4px}
 .score-weight-label{display:inline-flex;align-items:center;margin-left:8px;padding-left:10px;border-left:2px solid var(--text);font-size:12px;font-weight:900;color:var(--text);white-space:nowrap}
-.check-meta{font-size:10px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
 .rating-group{grid-area:rating;display:flex;flex-direction:row;gap:8px;align-items:center;flex-wrap:wrap}
 .status-opt{border:2px solid var(--line);border-radius:22px;background:transparent;padding:0;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
 .status-opt input{display:none}
@@ -111,9 +110,6 @@ body{font-family:"Segoe UI",Inter,Arial,sans-serif;color:var(--text);background:
 .btn-add-photo{background:linear-gradient(135deg,var(--brand),var(--accent));color:#fff;border:none;border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 3px 10px rgba(14,165,164,.35);transition:.15s;flex:none}
 .btn-add-photo:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 5px 14px rgba(14,165,164,.45)}
 .add-photo-label{font-size:9px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;line-height:1.2;white-space:nowrap}
-.flag-wrap{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--bad);font-weight:900;text-transform:uppercase;white-space:nowrap;background:var(--bad-bg);border:1.5px solid rgba(185,28,28,.35);border-radius:10px;padding:7px 9px;min-width:88px;box-shadow:0 2px 8px rgba(185,28,28,.10)}
-.flag-wrap input{accent-color:var(--bad);width:20px;height:20px;min-width:20px;cursor:pointer}
-.flag-wrap:has(input:checked){background:#fecaca;border-color:var(--bad);color:#7f1d1d}
 [data-theme="dark"] .flag-wrap:has(input:checked){background:#7f1d1d;color:#fff;border-color:#ef4444}
 .photo-grid{grid-area:photos;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,200px));justify-content:center;gap:14px;margin-top:6px}
 .photo-card{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);display:flex;flex-direction:column}
@@ -209,7 +205,7 @@ body{font-family:"Segoe UI",Inter,Arial,sans-serif;color:var(--text);background:
   align-items:center !important;
   justify-content:center !important;
   gap:4px !important;
-  font-size:8px !important;
+  font-size:12px !important;
   color:var(--bad) !important;
   font-weight:900 !important;
   text-transform:uppercase !important;
@@ -2525,7 +2521,6 @@ function renderItem(item){
     <div class="check-title">
       ${safe(item.item_no)}. ${safe(item.item_title)}
       <span class="score-weight-label">Score Weight: ${safe(formatScoreWeight(getItemScoreWeight(item)))}</span>
-      <div class="check-meta">${safe(item.section_name || "")}</div>
     </div>
     <div class="rating-group">
       ${statusOption(item,"achieved","Achieved")}
@@ -2536,7 +2531,7 @@ function renderItem(item){
     <div class="item-tools">
       <button class="btn-add-photo" type="button" title="Add item photos">📷</button>
       <div class="add-photo-label">Add Photo</div>
-      <label class="flag-wrap"><input class="flag-check" type="checkbox" ${isFlagged(item)?"checked":""}> Flag</label>
+      <label class="flag-wrap"><input class="flag-check" type="checkbox" ${isFlagged(item)?"checked":""}> Flag Item</label>
     </div>
     <div class="comment-field">
       <label>Comment</label>
@@ -2554,7 +2549,7 @@ function renderItem(item){
       radio.closest(".status-opt").classList.add("is-selected");
       updateSummary();
       refreshSectionPills();
-      if(radio.value==="achieved"){
+      if(radio.value==="achieved" || radio.value==="na"){
         goToNextCheckRow(row);
       }else{
         focusCommentOnRow(row);
