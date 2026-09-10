@@ -1247,6 +1247,33 @@ button[aria-label="Delete"]:hover{
   color:#334155 !important;
 }
 
+
+
+/* ===== CHECKLIST HOME + MAIN BUTTONS SHOW/HIDE ===== */
+#toggleButtonsBtn{
+  grid-column:1 / -1;
+}
+#mainButtonsStack.buttons-collapsed > button:not(#toggleButtonsBtn),
+#mainButtonsStack.buttons-collapsed > input{
+  display:none !important;
+}
+#mainButtonsStack.buttons-collapsed #toggleButtonsBtn{
+  grid-column:1 / -1 !important;
+}
+.checklist-home-row{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:8px 0 2px;
+}
+.checklist-home-btn{
+  width:min(320px,100%) !important;
+  min-height:44px;
+}
+@media(max-width:540px){
+  .checklist-home-row{padding-top:10px;}
+  .checklist-home-btn{width:100% !important;}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
@@ -1275,7 +1302,8 @@ button[aria-label="Delete"]:hover{
 </div>
 <div class="tool-group">
 <div class="tool-title">Main Buttons</div>
-<div class="stack">
+<div class="stack" id="mainButtonsStack">
+<button aria-expanded="true" class="btn btn-soft" id="toggleButtonsBtn" onclick="toggleMainButtons()" type="button">🙈 Hide Buttons</button>
 <button class="btn btn-soft" disabled="" id="generatePdfBtn" onclick="generateInspectionPdf()">📄 Generate PDF</button>
 <button class="btn btn-soft" disabled="" id="generateActionPlanBtn" onclick="generateActionPlanPdf()">📝 Generate Action Plan</button>
 <button class="btn btn-primary" onclick="openJsonFile()">📂 Import JSON File</button>
@@ -2478,6 +2506,30 @@ function updateSummary(){
   loadedData.report_header.failed_count=failed;
 }
 
+function goHome(){
+  if(window.scrollTo){
+    window.scrollTo({top:0,left:0,behavior:"smooth"});
+  }else{
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+  }
+}
+
+function setMainButtonsVisible(visible){
+  const stack=$("mainButtonsStack");
+  const toggle=$("toggleButtonsBtn");
+  if(!stack || !toggle) return;
+  stack.classList.toggle("buttons-collapsed", !visible);
+  toggle.textContent=visible ? "🙈 Hide Buttons" : "👁 Show Buttons";
+  toggle.setAttribute("aria-expanded", visible ? "true" : "false");
+}
+
+function toggleMainButtons(){
+  const stack=$("mainButtonsStack");
+  if(!stack) return;
+  setMainButtonsVisible(stack.classList.contains("buttons-collapsed"));
+}
+
 function renderChecklist(){
   const root=$("checklistRoot");
   root.innerHTML="";
@@ -2495,6 +2547,20 @@ function renderChecklist(){
     items.forEach(it=>body.appendChild(renderItem(it)));
     root.appendChild(wrapper);
   });
+
+  const lastItemList=root.querySelector(".check-section:last-child .check-items");
+  if(lastItemList){
+    const homeRow=document.createElement("div");
+    homeRow.className="checklist-home-row";
+    const homeBtn=document.createElement("button");
+    homeBtn.className="btn btn-soft checklist-home-btn";
+    homeBtn.type="button";
+    homeBtn.textContent="⌂ Home";
+    homeBtn.addEventListener("click",goHome);
+    homeRow.appendChild(homeBtn);
+    lastItemList.appendChild(homeRow);
+  }
+
   updateSummary();
 }
 
