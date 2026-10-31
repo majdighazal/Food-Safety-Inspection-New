@@ -655,7 +655,6 @@ button[onclick="confirmClearLoaded()"]:hover{
 .pdf-notes-wrap{border:1px solid #d9e3ee;border-radius:16px;overflow:hidden;margin-bottom:14px}.pdf-notes-head{background:linear-gradient(135deg,#0b3356,#1295a8);color:#fff;font-size:13px;font-weight:900;padding:11px 14px}.pdf-notes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}.pdf-note-card{border:1px solid #d9e3ee;border-radius:12px;padding:12px;min-height:76px}.pdf-note-card.full{grid-column:1/-1}.pdf-note-card h4{margin:0 0 8px;color:#334155;font-size:10px;text-transform:uppercase}.pdf-note-card p{margin:0;font-size:12px;font-weight:700;line-height:1.45;white-space:pre-wrap}
 .pdf-footer{position:absolute;left:26px;right:26px;bottom:16px;border-top:1px solid #d9e3ee;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;font-weight:900;color:#667085}
 .pdf-action-page .pdf-section-block{margin-top:12px}.pdf-action-box{border:1px solid #d9e3ee;border-radius:12px;padding:10px 12px;background:#fff;margin-top:10px;min-height:54px}.pdf-action-label{font-size:10px;font-weight:900;text-transform:uppercase;color:#334155;margin-bottom:7px}.pdf-blank-line{height:46px;border:1px solid #d9e3ee;border-radius:8px;background:#fff}.pdf-meta-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px}.pdf-meta-box{border:1px solid #d9e3ee;border-radius:10px;min-height:48px;padding:8px;background:#fff;text-align:center}.pdf-meta-box .pdf-action-label{font-size:9px;margin-bottom:8px}.pdf-meta-value{font-size:11px;font-weight:700;color:#162130;min-height:16px}.pdf-empty{border:1px solid #d9e3ee;border-radius:12px;padding:18px;color:#667085;font-size:12px;font-weight:800;background:#f8fbff}
-====
 /* ===== FINAL EXPORT PROGRESS + MATCHED INSPECTION REPORT FORMAT ===== */
 .export-progress-overlay{
   display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:4000;
@@ -3639,7 +3638,33 @@ function compactInspectionPdfPages(zone){
   cleanupEmptyChecklistPages(zone);
   updatePdfPageFooters(zone);
 }
+function paginateAttentionTable(zone){
+  // Issues Requiring Attention table: when it does not fit on the cover page,
+  // move the remaining rows onto continuation pages (repeating the table header).
+  let page=zone.querySelector('.pdf-page');
+  let guard=0;
+  while(page && guard<200){
+    guard++;
+    const table=page.querySelector('table.pdf-attention-table');
+    if(!table) break;
+    const tbody=table.querySelector('tbody');
+    if(!tbody || !pdfPageOverflows(page) || tbody.querySelectorAll('tr').length<=1) break;
+    const next=document.createElement('section');
+    next.className='pdf-page';
+    next.innerHTML='<div class="pdf-topline"><h2>Issues Requiring Attention</h2><div class="right">Private &amp; Confidential<br>Continued</div></div>'+
+      '<div class="pdf-band">Issues Requiring Attention (Continued)</div>'+
+      '<table class="pdf-table pdf-attention-table">'+(table.querySelector('thead')?table.querySelector('thead').outerHTML:'')+'<tbody></tbody></table>'+
+      '<div class="pdf-footer"><span>Private &amp; Confidential</span><span></span></div>';
+    page.insertAdjacentElement('afterend',next);
+    const nb=next.querySelector('tbody');
+    while(pdfPageOverflows(page) && tbody.querySelectorAll('tr').length>1){
+      nb.insertBefore(tbody.lastElementChild, nb.firstChild);
+    }
+    page=next;
+  }
+}
 function optimizeInspectionPdfPages(zone){
+  paginateAttentionTable(zone);
   // First move overflowing content down, then repeatedly pull available content
   // back up based on actual rendered height. This is device-independent because
   // it measures the hidden fixed-width A4 render zone, not the phone viewport.
@@ -4321,4 +4346,4 @@ function actionPlanCss(){ return `
 </body>
 </html>
 
-Majdi commentL line 652 change font size for comments
+This Code developed by Majdi Ghazal
